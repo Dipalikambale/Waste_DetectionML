@@ -1,4 +1,5 @@
 Flask>=3.1,<4
+gradio>=5.0,<6
 Pillow>=11,<13
 PyYAML>=6.0.2,<7
 requests>=2.31,<3

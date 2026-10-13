@@ -3,8 +3,8 @@ title: Waste Detection
 emoji: "♻️"
 colorFrom: green
 colorTo: blue
-sdk: docker
-app_port: 5000
+sdk: gradio
+app_file: app.py
 pinned: false
 ---
 
@@ -184,12 +184,14 @@ HTTP image inference endpoint are the working entry points.
 
 ## 5. Free public demo on Hugging Face Spaces
 
-This repository is configured as a Docker Space on port 5000. To publish the
-trained model, create a **public Docker Space**, sync this GitHub repository's
-source into it, then upload `artifacts/best.pt` into the Space at
-`artifacts/best.pt`. Do not upload the TACO source or prepared dataset. The
-Space should become ready once the weights are present; free CPU Spaces may
-sleep when idle and take time to wake.
+The Space uses a lightweight Gradio interface that calls the same Flask
+inference API as the local app. The Flask app and Docker deployment remain
+available for local and AWS hosting. Hugging Face's free ZeroGPU option may
+sleep when idle; the demo runs inference on CPU and can take time to wake.
+
+Create a **public Gradio Space** using the free ZeroGPU option, then sync this
+GitHub repository's source into it. Upload `artifacts/best.pt` to the Space at
+`artifacts/best.pt`. Do not upload the TACO source or prepared dataset.
 
 The checkpoint is not committed to GitHub. Upload it separately from your
 machine through the Space's **Files and versions → Add file → Upload files**
