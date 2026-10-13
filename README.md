@@ -1,3 +1,13 @@
+---
+title: Waste Detection
+emoji: "♻️"
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 5000
+pinned: false
+---
+
 # Waste Detection
 
 An end-to-end waste-object detection project using YOLOv5 through Ultralytics,
@@ -171,6 +181,29 @@ and app behind an HTTPS-terminating load balancer or reverse proxy for
 production use. Scale-out, Kafka/Kinesis streams, and live camera ingestion are
 not provisioned by this starter project; the validated batch dataset flow and
 HTTP image inference endpoint are the working entry points.
+
+## 5. Free public demo on Hugging Face Spaces
+
+This repository is configured as a Docker Space on port 5000. To publish the
+trained model, create a **public Docker Space**, sync this GitHub repository's
+source into it, then upload `artifacts/best.pt` into the Space at
+`artifacts/best.pt`. Do not upload the TACO source or prepared dataset. The
+Space should become ready once the weights are present; free CPU Spaces may
+sleep when idle and take time to wake.
+
+The checkpoint is not committed to GitHub. Upload it separately from your
+machine through the Space's **Files and versions → Add file → Upload files**
+page, or with the Hugging Face CLI:
+
+```powershell
+python -m pip install -U huggingface_hub
+hf auth login
+hf upload <your-username>/<your-space-name> artifacts\best.pt artifacts/best.pt --repo-type space
+```
+
+Only upload the model after creating your own Space and logging in locally.
+Never paste an access token into chat or commit it to GitHub. A publicly
+accessible Space makes its uploaded model files available to its visitors.
 
 ## Operational notes
 
