@@ -160,8 +160,10 @@ The instance pulls from ECR and the model bucket using its instance profile.
 4. Add the `AWS_DEPLOY_ROLE_ARN` repository secret using the
    `GitHubDeployRoleArn` output. Set these Actions variables from the stack
    outputs: `AWS_REGION`, `ECR_REPOSITORY_URI`, `EC2_INSTANCE_ID`, and
-   `MODEL_BUCKET`.
-5. Push to `main`. The instance must be able to reach ECR, S3, and SSM endpoints
+   `MODEL_BUCKET`. Set `AWS_DEPLOY_ENABLED` to `true` only after these values
+   and the role secret are configured.
+5. Push to `main` (or manually run the workflow on `main`). The instance must
+   be able to reach ECR, S3, and SSM endpoints
    (the template provisions a public subnet and internet gateway).
 
 The template opens HTTP port 80 only to the CIDR you specify; keep the instance
