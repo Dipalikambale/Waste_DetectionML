@@ -187,7 +187,7 @@ HTTP image inference endpoint are the working entry points.
 The Space uses a lightweight Gradio interface that calls the same Flask
 inference API as the local app. The Flask app and Docker deployment remain
 available for local and AWS hosting. Hugging Face's free ZeroGPU option may
-sleep when idle; the demo runs inference on CPU and can take time to wake.
+sleep when idle or queue GPU requests, so the demo can take time to wake.
 
 Create a **public Gradio Space** using the free ZeroGPU option, then sync this
 GitHub repository's source into it. Upload `artifacts/best.pt` to the Space at

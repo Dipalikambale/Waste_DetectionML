@@ -5,6 +5,7 @@ import io
 from typing import Any
 
 import gradio as gr
+import spaces
 from flask.testing import FlaskClient
 from PIL import Image, ImageDraw
 
@@ -14,6 +15,7 @@ _flask_app = create_app()
 _flask_client: FlaskClient = _flask_app.test_client()
 
 
+@spaces.GPU
 def predict_image(
     image: Image.Image | None,
 ) -> tuple[Image.Image | None, list[list[Any]]]:

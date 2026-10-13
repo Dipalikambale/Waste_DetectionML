@@ -4,4 +4,5 @@ gunicorn>=23,<24
 Pillow>=11,<13
 PyYAML>=6.0.2,<7
 requests>=2.31,<3
+spaces>=0.51,<1
 ultralytics>=8.3.40,<9
