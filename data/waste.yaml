@@ -1,0 +1,12 @@
+# Replace `path` with the directory containing images/ and labels/.
+path: waste-dataset
+train: images/train
+val: images/val
+
+names:
+  0: cardboard
+  1: glass
+  2: metal
+  3: paper
+  4: plastic
+  5: trash

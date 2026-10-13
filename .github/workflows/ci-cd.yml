@@ -1,0 +1,92 @@
+name: CI and AWS deployment
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-test.txt
+      - run: python -m pip install -e . -r requirements-test.txt
+      - run: python -m pytest -q
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY_URI: ${{ vars.ECR_REPOSITORY_URI }}
+      EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+      MODEL_BUCKET: ${{ vars.MODEL_BUCKET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr-login
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ vars.ECR_REPOSITORY_URI }}:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Deploy image on EC2 through SSM
+        env:
+          IMAGE_URI: ${{ vars.ECR_REPOSITORY_URI }}:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          set -euo pipefail
+          printf -v region_q '%q' "$AWS_REGION"
+          printf -v registry_q '%q' "$ECR_REGISTRY"
+          printf -v image_q '%q' "$IMAGE_URI"
+          printf -v bucket_q '%q' "$MODEL_BUCKET"
+          script=$(printf '%s\n' \
+            'set -euo pipefail' \
+            "aws ecr get-login-password --region $region_q | docker login --username AWS --password-stdin $registry_q" \
+            "docker pull $image_q" \
+            'install -d -m 0755 /opt/waste-detection/artifacts' \
+            "aws s3 cp s3://$bucket_q/models/best.pt /opt/waste-detection/artifacts/best.pt" \
+            "aws s3 cp s3://$bucket_q/models/metadata.json /opt/waste-detection/artifacts/metadata.json" \
+            'docker stop waste-detection || true' \
+            'docker rm waste-detection || true' \
+            "docker run --detach --restart unless-stopped --name waste-detection --publish 80:5000 --volume /opt/waste-detection/artifacts:/app/artifacts:ro $image_q")
+          parameters=$(jq -n --arg command "$script" '{commands: [$command]}')
+          command_id=$(aws ssm send-command \
+            --instance-ids "$EC2_INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "$parameters" \
+            --query 'Command.CommandId' \
+            --output text)
+          for attempt in $(seq 1 60); do
+            status=$(aws ssm get-command-invocation \
+              --command-id "$command_id" \
+              --instance-id "$EC2_INSTANCE_ID" \
+              --query 'Status' \
+              --output text 2>/dev/null || true)
+            if [[ "$status" == "Success" ]]; then
+              exit 0
+            elif [[ "$status" == "Failed" || "$status" == "TimedOut" || "$status" == "Cancelled" ]]; then
+              aws ssm get-command-invocation --command-id "$command_id" --instance-id "$EC2_INSTANCE_ID"
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "Timed out waiting for EC2 deployment command $command_id"
+          exit 1
